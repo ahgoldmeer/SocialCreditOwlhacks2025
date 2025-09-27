@@ -7,6 +7,15 @@ from google.genai import types
 
 from . import bp
 
+# --- In-memory simple user store (placeholder until real auth/db) ---
+_USER_POINTS = {
+	'demo-user': 0
+}
+
+def _get_current_user_id():
+	# Placeholder: in a real system, extract from auth (JWT/session)
+	return 'demo-user'
+
 @bp.route('/', methods=['GET'])
 def index():
 	db.test()
@@ -17,6 +26,15 @@ def index():
 @bp.route('/health', methods=['GET'])
 def health():
 	return jsonify({'status': 'ok'}), 200
+
+
+@bp.route('/users/me', methods=['GET'])
+def users_me():
+	uid = _get_current_user_id()
+	return jsonify({
+		'user_id': uid,
+		'points': _USER_POINTS.get(uid, 0)
+	}), 200
 
 
 @bp.route('/echo', methods=['POST'])
@@ -48,7 +66,7 @@ def genai_route():
 		# Create the prompt with text and multiple images
 		response = client.models.generate_content(
 
-			model="gemini-2.5-flash",
+			model="gemini-2.5-flash-lite",
 			contents=[
 				"Does the second image have less trash than the first image? Respond with yes or no.",
 				uploaded_file,  # Use the uploaded file reference
@@ -59,7 +77,17 @@ def genai_route():
 			]
 		)
 		print(response.text)
-		return jsonify({'response': response.text}), 200
+		# Very naive parsing: grant a point if model says 'yes'
+		text_lower = (response.text or '').lower()
+		improved = 'yes' in text_lower and 'no' not in text_lower  # crude heuristic
+		uid = _get_current_user_id()
+		if improved:
+			_USER_POINTS[uid] = _USER_POINTS.get(uid, 0) + 1
+		return jsonify({
+			'response': response.text,
+			'improved': improved,
+			'points': _USER_POINTS.get(uid, 0)
+		}), 200
 
 	except Exception as e:
 		print("Error during GenAI processing:", e)

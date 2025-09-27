@@ -5,13 +5,11 @@ interface Cleanup { id: string; address: string; created_at: string; points: num
 
 export function Dashboard() {
   const [points, setPoints] = useState<number>(0);
-  const [cleanups, setCleanups] = useState<Cleanup[]>([]);
-  const [top, setTop] = useState<number>(0);
+  const [cleanups] = useState<Cleanup[]>([]); // placeholder until backend implemented
+  const [top] = useState<number>(0); // placeholder
 
   function load() {
-    axios.get('/cleanups/me').then(r => setCleanups(r.data.cleanups));
     axios.get('/users/me').then(r => setPoints(r.data.points));
-    axios.get('/leaderboard?mode=individual&limit=1').then(r => setTop(r.data[0]?.points || 0));
   }
 
   useEffect(() => { load(); }, []);
