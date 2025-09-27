@@ -40,3 +40,12 @@ def add_user(username, email, password_hash, createdAt):
 
     result = users_collection.insert_one(user)
     return result.inserted_id
+
+def get_user_by_username(username):
+    client = MongoClient(uri, server_api=ServerApi('1'))
+    db = client.get_database(database_name)
+
+    users_collection = db.get_collection(user_collection_name)
+
+    user = users_collection.find_one({"username": username})
+    return user

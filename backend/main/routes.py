@@ -5,8 +5,6 @@ from . import bp
 
 @bp.route('/', methods=['GET'])
 def index():
-	result = add_user()
-	print(result)
 	return jsonify({'message': 'SocialCredit API backend running'}), 200
 
 
@@ -20,6 +18,8 @@ def echo():
 	data = request.get_json(silent=True) or {}
 	return jsonify({'received': data}), 200
 
+
+# User routes
 @bp.route('/add_user', methods=['POST'])
 def add_user():
 	data = request.get_json(silent=True) or { }
@@ -34,6 +34,20 @@ def add_user():
 	try:
 		user_info = db.add_user(username, email, password_hash, createdAt)
 		return jsonify({'message': 'User added', 'user_info': str(user_info)}), 201
+	except Exception as e:
+		return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/get_user', methods=['GET'])
+def get_user():
+	username = request.args.get('username')
+	try:
+		user = db.get_user_by_username(username)
+		if user:
+			user['_id'] = str(user['_id'])  # Convert ObjectId to string for JSON serialization
+			return jsonify({'user': user}), 200
+		else:
+			return jsonify({'error': 'User not found'}), 404
 	except Exception as e:
 		return jsonify({'error': str(e)}), 500
 
