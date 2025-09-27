@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
-interface Cleanup { id: string; description: string; created_at: string; points: number }
+interface Cleanup { id: string; address: string; created_at: string; points: number }
 
 export function Dashboard() {
   const [points, setPoints] = useState<number>(0);
@@ -39,7 +39,7 @@ export function Dashboard() {
         <ul className="space-y-2">
           {cleanups.map(c => (
             <li key={c.id} className="rounded border bg-white p-3 text-sm">
-              <p className="font-medium">{c.description}</p>
+              <p className="font-medium">{c.address}</p>
               <p className="text-xs text-gray-500 flex justify-between"><span>{new Date(c.created_at).toLocaleDateString()}</span><span className="font-semibold">+{c.points}</span></p>
             </li>
           ))}

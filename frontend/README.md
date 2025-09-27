@@ -4,7 +4,7 @@ React + Vite + Tailwind + shadcn/ui style components (Radix + utilities) starter
 
 ## Cleanup Submission Flow (Updated)
 Users must now provide a before and after image. The frontend sends a multipart/form-data POST with:
-- description (text)
+- address (text location / block)
 - before_image (File)
 - after_image (File)
 
