@@ -21,3 +21,15 @@ def test_echo():
     resp = client.post('/echo', json=payload)
     assert resp.status_code == 200
     assert resp.get_json() == {'received': payload}
+
+def test_add_user():
+    app = create_app()
+    client = app.test_client()
+    payload = {
+        'username': 'testuser',
+        'email': 'test@temple.edu',
+        'password_hash': 'hashed_password',
+        'createdAt': '2024-10-01T12:00:00Z'
+    }
+    resp = client.post('/add_user', json=payload)
+    assert resp.status_code == 201
