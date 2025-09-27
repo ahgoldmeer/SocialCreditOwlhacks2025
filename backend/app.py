@@ -26,6 +26,7 @@ except Exception:
     app.register_blueprint(main_bp)
 
 
+
 if __name__ == '__main__':
     # Use 127.0.0.1 and a fixed port so it's easy to test locally.
     app.run(host='127.0.0.1', port=5000, debug=True)

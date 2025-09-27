@@ -1,9 +1,11 @@
 from flask import jsonify, request
+from database import db
 
 from . import bp
 
 @bp.route('/', methods=['GET'])
 def index():
+	db.test()
 	return jsonify({'message': 'SocialCredit API backend running'}), 200
 
 
