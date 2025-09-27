@@ -38,8 +38,8 @@ def add_user():
 		return jsonify({'error': str(e)}), 500
 
 
-@bp.route('/get_user', methods=['GET'])
-def get_user():
+@bp.route('/get_user_details', methods=['GET'])
+def get_user_details():
 	username = request.args.get('username')
 	try:
 		user = db.get_user_by_username(username)
@@ -48,6 +48,21 @@ def get_user():
 			return jsonify({'user': user}), 200
 		else:
 			return jsonify({'error': 'User not found'}), 404
+	except Exception as e:
+		return jsonify({'error': str(e)}), 500
+
+
+# School routes
+@bp.route('/get_school_details', methods=['GET'])
+def get_school_details():
+	school_id = request.args.get('school_id')
+	try:
+		school = db.get_school_by_id(school_id)
+		if school:
+			school['_id'] = str(school['_id'])  # Convert ObjectId to string for JSON serialization
+			return jsonify({'school': school}), 200
+		else:
+			return jsonify({'error': 'School not found'}), 404
 	except Exception as e:
 		return jsonify({'error': str(e)}), 500
 

@@ -1,7 +1,7 @@
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from datetime import datetime
-from flask import request
+from bson import ObjectId
 import json
 import os
 
@@ -26,17 +26,27 @@ def test():
     except Exception as e:
         print(e)
 
-def add_user(username, email, password_hash, createdAt):
+# User functions
+def add_user(username, user_email, password_hash, createdAt):
     client = MongoClient(uri, server_api=ServerApi('1'))
     db = client.get_database(database_name)
 
     users_collection = db.get_collection(user_collection_name)
-
+    schools = db.get_collection('schools')
+    
+    # Assign user info
     user = user_template.copy()
     user["username"] = username
-    user["email"] = email
+    user["email"] = user_email
     user["password_hash"] = password_hash
     user["createdAt"] = createdAt
+    
+    all_schools = schools.find({}, {"name": 1, "email": 1, "_id": 1})
+    for school in all_schools:
+        school_email = school.get('email')
+        if school_email in user_email:
+            user["school"] = school.get('_id')
+            break
 
     result = users_collection.insert_one(user)
     return result.inserted_id
@@ -49,3 +59,13 @@ def get_user_by_username(username):
 
     user = users_collection.find_one({"username": username})
     return user
+
+# School functions
+def get_school_by_id(school_id):
+    client = MongoClient(uri, server_api=ServerApi('1'))
+    db = client.get_database(database_name)
+
+    schools_collection = db.get_collection('schools')
+
+    school = schools_collection.find_one({"_id": ObjectId(school_id)})
+    return school
