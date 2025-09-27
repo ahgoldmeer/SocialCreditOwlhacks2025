@@ -8,6 +8,7 @@ registering the `main` blueprint so behaviour remains identical.
 """
 from flask import Flask
 from flask_cors import CORS
+from database import db
 
 try:
     # Preferred: import the factory from the package when running from the
@@ -25,6 +26,8 @@ except Exception:
     CORS(app)
     app.register_blueprint(main_bp)
 
+
+db.test()
 
 if __name__ == '__main__':
     # Use 127.0.0.1 and a fixed port so it's easy to test locally.
