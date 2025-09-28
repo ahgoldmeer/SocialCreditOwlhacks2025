@@ -4,17 +4,43 @@ from flask import jsonify, request
 from database import db
 import google.genai as genai
 from google.genai import types
+from datetime import datetime
 
 from . import bp
+from auth import require_auth, optional_auth
 
-# --- In-memory simple user store (placeholder until real auth/db) ---
-_USER_POINTS = {
-	'demo-user': 0
+EMAIL_DOMAIN_SCHOOL_MAP = {
+	'temple.edu': 'temple',
+	'lasalle.edu': 'lasalle',
+	'drexel.edu': 'drexel',
+	'upenn.edu': 'upenn',
+	'ccp.edu': 'cccp',  # adjust if different
 }
 
-def _get_current_user_id():
-	# Placeholder: in a real system, extract from auth (JWT/session)
-	return 'demo-user'
+def _extract_email_domain(email: str):
+	return email.split('@', 1)[1].lower() if '@' in email else ''
+
+def _provision_user_if_needed(claims):
+	email = claims.get('email')
+	sub = claims.get('sub')
+	if not email or not sub:
+		return None, 'missing_email_or_sub'
+	existing = db.get_user_by_username(email)  # using email as username key for uniqueness
+	if existing:
+		return existing, None
+	# Create new user
+	now_iso = datetime.utcnow().isoformat()
+	domain = _extract_email_domain(email)
+	school = EMAIL_DOMAIN_SCHOOL_MAP.get(domain, '')
+	# Password hash not needed for social/JWT auth
+	try:
+		user_id = db.add_user(username=email, user_email=email, password_hash='', createdAt=now_iso)
+		# Align template field names: ensure score field initialized (db template uses score)
+		# add_user already inserts template with score 0
+		created = db.get_user_by_username(email)
+		return created, None
+	except Exception as e:
+		return None, str(e)
 
 @bp.route('/', methods=['GET'])
 def index():
@@ -28,12 +54,36 @@ def health():
 	return jsonify({'status': 'ok'}), 200
 
 
-@bp.route('/users/me', methods=['GET'])
-def users_me():
-	uid = _get_current_user_id()
+@bp.route('/auth/me', methods=['GET'])
+@require_auth
+def auth_me():
+	claims = getattr(request, 'claims')
+	user, err = _provision_user_if_needed(claims)
+	if err:
+		return jsonify({'error': err}), 400
+	# Normalize response
 	return jsonify({
-		'user_id': uid,
-		'points': _USER_POINTS.get(uid, 0)
+		'sub': claims.get('sub'),
+		'email': claims.get('email'),
+		'user': {
+			'username': user.get('username'),
+			'email': user.get('email'),
+			'school': user.get('school'),
+			'score': user.get('points', user.get('score', 0))
+		}
+	}), 200
+
+@bp.route('/users/me', methods=['GET'])
+@require_auth
+def users_me():
+	claims = getattr(request, 'claims')
+	user = db.get_user_by_username(claims.get('email'))
+	if not user:
+		return jsonify({'error': 'user_not_found'}), 404
+	return jsonify({
+		'user_id': user.get('username'),
+		'score': user.get('points', user.get('score', 0)),
+		'school': user.get('school')
 	}), 200
 
 
@@ -43,6 +93,7 @@ def echo():
 	return jsonify({'received': data}), 200
 
 @bp.route('/genai', methods=['GET', 'POST'])
+@require_auth
 def genai_route():
 	genaikey = os.environ.get('GEMINI_KEY')
 	client = genai.Client(api_key=genaikey)
@@ -77,16 +128,24 @@ def genai_route():
 			]
 		)
 		print(response.text)
-		# Very naive parsing: grant a point if model says 'yes'
+		# Naive parsing to detect improvement
 		text_lower = (response.text or '').lower()
-		improved = 'yes' in text_lower and 'no' not in text_lower  # crude heuristic
-		uid = _get_current_user_id()
-		if improved:
-			_USER_POINTS[uid] = _USER_POINTS.get(uid, 0) + 1
+		improved = 'yes' in text_lower and 'no' not in text_lower
+		claims = getattr(request, 'claims')
+		email = claims.get('email')
+		updated_score = None
+		if improved and email:
+			try:
+				# Reuse update_user_score which increments points and school total
+				db.update_user_score(email, 1)
+				user = db.get_user_by_username(email)
+				updated_score = user.get('points', user.get('score', 0))
+			except Exception as e:
+				print('Failed to update user score:', e)
 		return jsonify({
 			'response': response.text,
 			'improved': improved,
-			'points': _USER_POINTS.get(uid, 0)
+			'score': updated_score
 		}), 200
 
 	except Exception as e:
@@ -118,19 +177,18 @@ def genai_route():
 
 # User routes
 @bp.route('/add_user', methods=['POST'])
+@require_auth
 def add_user():
-	data = request.get_json(silent=True) or { }
+	# Protected manual add (mostly for admin/testing)
+	data = request.get_json(silent=True) or {}
 	username = data.get('username')
 	email = data.get('email')
-	password_hash = data.get('password_hash')
-	createdAt = data.get('createdAt')
-
-	if not username or not email or not password_hash or not createdAt:
+	created_at = data.get('createdAt') or datetime.utcnow().isoformat()
+	if not username or not email:
 		return jsonify({'error': 'Missing required fields'}), 400
-
 	try:
-		user_info = db.add_user(username, email, password_hash, createdAt)
-		return jsonify({'message': 'User added', 'user_info': str(user_info)}), 201
+		user_id = db.add_user(username, email, '', created_at)
+		return jsonify({'message': 'User added', 'id': str(user_id)}), 201
 	except Exception as e:
 		return jsonify({'error': str(e)}), 500
 
@@ -150,6 +208,7 @@ def get_user_details():
 
 
 @bp.route('/add_user_score', methods=['PUT'])
+@require_auth
 def add_user_score():
 	data = request.get_json(silent=True) or { }
 	username = data.get('username')
@@ -174,6 +233,7 @@ def add_user_score():
 
 # School routes
 @bp.route('/get_school_details', methods=['GET'])
+@optional_auth
 def get_school_details():
 	school_id = request.args.get('school_id')
 	try:
