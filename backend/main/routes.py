@@ -52,6 +52,29 @@ def get_user_details():
 		return jsonify({'error': str(e)}), 500
 
 
+@bp.route('/add_user_score', methods=['PUT'])
+def add_user_score():
+	data = request.get_json(silent=True) or { }
+	username = data.get('username')
+	points = data.get('points')
+
+	if not username or points is None:
+		return jsonify({'error': 'Missing required fields'}), 400
+
+	try:
+		user = db.get_user_by_username(username)
+		if not user:
+			return jsonify({'error': 'User not found'}), 404
+
+		# Update user score and history
+		new_score = user.get('points', 0) + points
+		db.update_user_score(username, points)
+
+		return jsonify({'message': 'User score updated', 'new_score': new_score}), 200
+	except Exception as e:
+		return jsonify({'error': str(e)}), 500
+
+
 # School routes
 @bp.route('/get_school_details', methods=['GET'])
 def get_school_details():

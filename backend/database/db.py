@@ -12,6 +12,7 @@ with open(template_path) as t:
 
 database_name = os.environ.get('MONGODB_DATABASE')
 user_collection_name = os.environ.get('MONGODB_USER_COLLECTION')
+school_collection_name = os.environ.get('MONGODB_SCHOOL_COLLECTION')
 
 uri = os.environ.get('MONGODB_URI')
 
@@ -46,6 +47,12 @@ def add_user(username, user_email, password_hash, createdAt):
         school_email = school.get('email')
         if school_email in user_email:
             user["school"] = school.get('_id')
+
+            # update school's user list
+            schools.update_one(
+                {"_id": school.get('_id')},
+                {"$inc": {"noStudents": 1}}
+            )
             break
 
     result = users_collection.insert_one(user)
@@ -59,6 +66,31 @@ def get_user_by_username(username):
 
     user = users_collection.find_one({"username": username})
     return user
+
+def update_user_score(username, points):
+    client = MongoClient(uri, server_api=ServerApi('1'))
+    db = client.get_database(database_name)
+
+    users_collection = db.get_collection(user_collection_name)
+    schools_collection = db.get_collection(school_collection_name)
+
+    result = users_collection.update_one(
+        {"username": username},
+        {
+            "$inc": {"points": points},
+            "$push": {"history": {"points_earned": points, "timestamp": datetime.utcnow()}}
+        }
+    )
+
+    # update school's total points
+    user = users_collection.find_one({"username": username})
+
+    schools_collection.update_one(
+        {"_id": user.get("school")},
+        {"$inc": {"totalPoints": points}}
+    )
+
+    return result.modified_count
 
 # School functions
 def get_school_by_id(school_id):
