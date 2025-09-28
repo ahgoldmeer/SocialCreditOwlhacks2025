@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || 'http://localhost:8000',
+  // baseURL: import.meta.env.VITE_API_BASE || 'http://localhost:8000',
+  baseURL: 'http://flask-backend:5000',
+  timeout: 5000,
   withCredentials: true,
 });
 
