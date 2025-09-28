@@ -6,12 +6,12 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/leaderboard': 'http://localhost:5000',
-      '/cleanups': 'http://localhost:5000',
-      '/auth': 'http://localhost:5000',
-      '/schools': 'http://localhost:5000',
-      '/users': 'http://localhost:5000',
-      '/genai': 'http://localhost:5000'
+      '/leaderboard': 'http://flask-backend:5000',
+      '/cleanups': 'http://flask-backend:5000',
+      '/auth': 'http://flask-backend:5000',
+      '/schools': 'http://flask-backend:5000',
+      '/users': 'http://flask-backend:5000',
+      '/genai': 'http://flask-backend:5000'
     }
   }
 });
