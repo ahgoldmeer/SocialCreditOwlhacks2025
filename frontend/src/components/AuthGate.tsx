@@ -28,5 +28,6 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   if (isLoading || !initialized) return <p className="p-4 text-sm text-gray-500">Authenticating...</p>;
   if (error) return <p className="p-4 text-sm text-red-600">{error.message}</p>;
+
   return <>{children}</>;
 }

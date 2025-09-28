@@ -7,17 +7,19 @@ COPY package.json package-lock.json ./
 RUN rm -rf node_modules package-lock.json && npm install
 
 RUN npm install -g rollup
+# Install dependencies, including @auth0/auth0-react
+RUN npm install @auth0/auth0-react
 
 COPY . .
 
 EXPOSE 5173
 
-ARG VITE_AUTH0_DOMAIN
-ARG VITE_AUTH0_CLIENT_ID
-ARG VITE_AUTH0_AUDIENCE
-ENV VITE_AUTH0_DOMAIN=$VITE_AUTH0_DOMAIN \
-    VITE_AUTH0_CLIENT_ID=$VITE_AUTH0_CLIENT_ID \
-    VITE_AUTH0_AUDIENCE=$VITE_AUTH0_AUDIENCE
+# ARG VITE_AUTH0_DOMAIN
+# ARG VITE_AUTH0_CLIENT_ID
+# ARG VITE_AUTH0_AUDIENCE
+# ENV VITE_AUTH0_DOMAIN=$VITE_AUTH0_DOMAIN \
+#     VITE_AUTH0_CLIENT_ID=$VITE_AUTH0_CLIENT_ID \
+#     VITE_AUTH0_AUDIENCE=$VITE_AUTH0_AUDIENCE
 
 RUN npm run build
 
